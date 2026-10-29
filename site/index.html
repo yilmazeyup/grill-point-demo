@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- A demo with fictional guests: keep it out of search results. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#110C0A" />
+    <title>Grill-Point · demo</title>
+    <script>
+      // The language: ?lang= first, then the last choice on this device (the app and the panel read the same), else
+      // Dutch. The look: ?theme=, the last choice, else by the sun in Valkenswaard. Both set before the frames load.
+      (function () {
+        var all = ['nl', 'en', 'tr', 'ar', 'fr', 'de', 'it'];
+        var lang = 'nl';
+        var q = new URLSearchParams(location.search);
+        try {
+          var asked = q.get('lang');
+          var saved = localStorage.getItem('grill-lang');
+          lang = all.indexOf(asked) >= 0 ? asked : all.indexOf(saved) >= 0 ? saved : 'nl';
+          localStorage.setItem('grill-lang', lang);
+        } catch (e) {}
+        var root = document.documentElement;
+        root.lang = lang;
+        root.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        if (lang !== 'nl') root.className += ' i18n-wait';
+        window.LANG = lang;
+        // Sunset in Valkenswaard (51.358 N, 5.455 E), NOAA's approximation, in minutes after midnight local time.
+        function sunset(d) {
+          var n = Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(d.getFullYear(), 0, 0)) / 864e5);
+          var g = (2 * Math.PI / 365) * (n - 1);
+          var eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+          var de = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g);
+          var lat = 51.358 * Math.PI / 180;
+          var ha = Math.acos(Math.cos(90.833 * Math.PI / 180) / (Math.cos(lat) * Math.cos(de)) - Math.tan(lat) * Math.tan(de)) * 180 / Math.PI;
+          return 720 - 4 * (5.455 - ha) - eq - d.getTimezoneOffset();
+        }
+        var theme = q.get('theme');
+        try {
+          // A look asked for in the address is remembered, so the app and the kitchen screen in the frames follow it.
+          if (theme === 'day' || theme === 'night') localStorage.setItem('grill-theme', theme);
+          else theme = localStorage.getItem('grill-theme');
+        } catch (e) {}
+        if (theme !== 'day' && theme !== 'night') {
+          // Like the app: night after sunset, and also while the kitchen is closed (before 15:00 it replays last
+          // evening's rush).
+          var now = new Date();
+          var m = now.getHours() * 60 + now.getMinutes();
+          theme = m >= sunset(now) || m < 15 * 60 ? 'night' : 'day';
+        }
+        root.dataset.theme = theme;
+      })();
+    </script>
+    <meta name="description" content="Een eigen app en een keukenscherm in 3D voor Grill-Point in Valkenswaard. Demo met fictieve gasten." />
+    <link rel="icon" href="app/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500..900&family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Geist:wght@300..700&family=Geist+Mono:wght@400;500&family=Noto+Kufi+Arabic:wght@500..800&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap"
+    />
+    <style>
+      :root,[data-theme='day']{--bg:#F4ECE0;--bg2:#EADFCF;--paper:#FBF6EE;--ink:#1C1410;--soft:#4A3C33;--muted:#8A7A6E;--line:rgba(28,20,16,.1);--line2:rgba(28,20,16,.2);--flame:#D42D17;--ember:#EE5E1C;--gold:#C98A1E}
+      [data-theme='night']{--bg:#110C0A;--bg2:#18110E;--paper:#1D1512;--ink:#F6EBDD;--soft:#D6C4B4;--muted:#9C8778;--line:rgba(255,226,200,.09);--line2:rgba(255,226,200,.18);--flame:#FF4B2B;--ember:#FF8A3D;--gold:#F2B04A}
+      *{box-sizing:border-box}
+      html,body{margin:0;background:var(--bg);color:var(--ink);transition:background .6s,color .6s}
+      body{font:16px/1.55 Geist,'IBM Plex Sans Arabic',system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+      .i18n-wait body{opacity:0}
+      a{color:inherit}
+      .wrap{max-width:1240px;margin:0 auto;padding:0 24px}
+      .heat{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+      .heat::before,.heat::after{content:'';position:absolute;border-radius:50%;filter:blur(60px)}
+      .heat::before{width:70vw;height:60vh;left:-20vw;top:-20vh;background:radial-gradient(closest-side,rgba(255,180,120,.55),transparent);animation:drift 26s ease-in-out infinite alternate}
+      .heat::after{width:80vw;height:60vh;right:-25vw;bottom:-30vh;background:radial-gradient(closest-side,rgba(238,94,28,.35),transparent);animation:drift 32s ease-in-out infinite alternate-reverse}
+      [data-theme='night'] .heat::before{background:radial-gradient(closest-side,rgba(255,110,40,.14),transparent)}
+      [data-theme='night'] .heat::after{background:radial-gradient(closest-side,rgba(255,90,30,.42),transparent)}
+      @keyframes drift{to{transform:translate3d(8vw,6vh,0) scale(1.1)}}
+      main,header,footer{position:relative;z-index:1}
+      header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 0}
+      .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+      .brand b{font:900 30px/1 'Big Shoulders Display','Noto Kufi Arabic',Impact,sans-serif;letter-spacing:.5px;white-space:nowrap}
+      .brand small{display:block;font:500 10px/1 'Geist Mono',monospace;letter-spacing:4px;color:var(--gold);margin-top:3px}
+      .tools{display:flex;gap:8px;align-items:center}
+      select,.pill{appearance:none;height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--ink);font:600 14px Geist,sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+      select option{color:#1C1410}
+      .label{font:500 11px/1.3 'Geist Mono',monospace;letter-spacing:2px;text-transform:uppercase;color:var(--flame)}
+      h1,h2{font-family:'Big Shoulders Display','Noto Kufi Arabic',Impact,sans-serif;text-transform:uppercase;font-weight:900;letter-spacing:-.5px;margin:0}
+      h1{font-size:clamp(54px,7.4vw,112px);line-height:.88}
+      h2{font-size:clamp(40px,5vw,72px);line-height:.92}
+      .fire{background:linear-gradient(100deg,var(--gold),var(--ember) 45%,var(--flame));-webkit-background-clip:text;background-clip:text;color:transparent}
+      .serif{font:italic 400 clamp(19px,1.8vw,24px)/1.35 Fraunces,Georgia,serif;color:var(--soft)}
+      [dir='rtl'] h1,[dir='rtl'] h2{text-transform:none;letter-spacing:0}
+      .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:30px 0 70px}
+      .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+      .btn{height:56px;padding:0 26px;border-radius:999px;display:inline-flex;align-items:center;gap:10px;font:700 16px Geist,sans-serif;text-decoration:none;border:0;cursor:pointer}
+      .btn.fire-bg{background:linear-gradient(120deg,var(--ember),var(--flame) 70%);color:#FFF6EC;box-shadow:0 14px 34px -14px rgba(255,75,43,.7)}
+      .btn.ink{background:var(--ink);color:var(--bg)}
+      .facts{display:flex;gap:28px;margin-top:34px;flex-wrap:wrap}
+      .facts div{display:flex;flex-direction:column}
+      .facts b{font:800 34px/1 'Big Shoulders Display',Impact,sans-serif}
+      .facts span{font:500 11px 'Geist Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-top:6px}
+      .phone{position:relative;width:min(390px,100%);aspect-ratio:390/820;margin:0 auto;border-radius:54px;padding:12px;background:#0b0807;box-shadow:0 40px 90px -30px rgba(0,0,0,.55),0 0 0 1px rgba(255,140,60,.18),0 0 80px -10px rgba(255,90,30,.35)}
+      .phone .screen{position:relative;width:100%;height:100%;border-radius:42px;overflow:hidden;background:#110C0A}
+      .phone iframe{position:absolute;left:0;top:0;width:390px;border:0;transform-origin:0 0}
+      section{padding:70px 0}
+      .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:34px}
+      .feature{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:8px;padding:20px;border-radius:24px;background:var(--paper);border:1px solid var(--line);transition:transform .35s cubic-bezier(.2,.9,.25,1.15),border-color .3s}
+      .feature:hover{transform:translateY(-4px);border-color:var(--flame)}
+      .feature .no{font:800 15px/1 'Geist Mono',monospace;color:var(--flame)}
+      .feature h3{margin:4px 0 0;font:800 24px/1.05 'Big Shoulders Display','Noto Kufi Arabic',Impact,sans-serif;text-transform:uppercase}
+      .feature p{margin:0;font-size:14.5px;color:var(--soft)}
+      .feature .go{margin-top:auto;font:600 13px Geist,sans-serif;color:var(--flame)}
+      .feature.hot{background:linear-gradient(135deg,var(--ember),var(--flame));border:0;color:#FFF6EC}
+      .feature.hot p,.feature.hot .go,.feature.hot .no{color:#FFE7D6}
+      .desk{margin-top:30px;border-radius:24px;overflow:hidden;border:1px solid var(--line2);background:#0b0807;box-shadow:0 40px 90px -40px rgba(0,0,0,.5)}
+      .desk .bar{display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.06)}
+      .desk .bar i{width:11px;height:11px;border-radius:50%;background:#3a2c26}
+      .desk .bar span{margin-left:10px;font:500 12px 'Geist Mono',monospace;color:#9C8778}
+      .view{position:relative;width:100%;aspect-ratio:1440/900;overflow:hidden}
+      .view iframe{position:absolute;left:0;top:0;width:1440px;height:900px;border:0;transform-origin:0 0}
+      .two{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+      .steps{display:grid;gap:12px;margin-top:24px}
+      .step{display:flex;gap:16px;padding:18px;border-radius:20px;background:var(--paper);border:1px solid var(--line)}
+      .step b{font:800 30px/1 'Big Shoulders Display',Impact,sans-serif;color:var(--flame);min-width:34px}
+      .honest{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px}
+      .honest div{padding:24px;border-radius:24px;background:var(--paper);border:1px solid var(--line)}
+      .honest h3{margin:0 0 10px;font:800 26px 'Big Shoulders Display',Impact,sans-serif;text-transform:uppercase}
+      .honest p{margin:0;color:var(--soft)}
+      footer{padding:40px 0 60px;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+      @media (max-width:980px){.hero,.two{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,1fr)}.honest{grid-template-columns:1fr}}
+      @media (max-width:560px){.grid{grid-template-columns:1fr}.brand b{font-size:24px}.brand svg{width:24px}select,.pill{height:36px;padding:0 12px;font-size:13px}.facts{gap:20px}}
+      @media (prefers-reduced-motion:reduce){.heat::before,.heat::after{animation:none}}
+    </style>
+  </head>
+  <body>
+    <div class="heat"></div>
+    <div class="wrap">
+      <header>
+        <a class="brand" href="./">
+          <svg width="30" height="42" viewBox="0 0 36 50" aria-hidden="true">
+            <defs>
+              <linearGradient id="fo" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#B3160C" /><stop offset=".45" stop-color="#F0461C" /><stop offset="1" stop-color="#FFB23E" /></linearGradient>
+              <linearGradient id="fi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF7A2A" /><stop offset="1" stop-color="#FFE08A" /></linearGradient>
+            </defs>
+            <path d="M18 49C8.6 49 2 42.8 2 34.3c0-7.4 4.8-11.6 7.6-17.6 1 3.6 2.9 6 5.5 7.4C15.6 15 18.4 7.4 24.5 1c-.8 7 1.7 11.4 4.4 15.7 2.2 3.6 5.1 8.4 5.1 15.3C34 42.4 27.3 49 18 49z" fill="url(#fo)" />
+            <path d="M18 49c-4.6 0-7.7-3-7.7-7.2 0-4.4 3.4-6.8 5.1-11 3.4 2.6 9.3 6 9.3 11.1C24.7 46.1 21.7 49 18 49z" fill="url(#fi)" />
+          </svg>
+          <span translate="no"><b>GRILL-POINT</b><small>VALKENSWAARD</small></span>
+        </a>
+        <div class="tools">
+          <button class="pill" id="theme" type="button" aria-label="Dag of nacht"></button>
+          <select id="lang" aria-label="Taal" translate="no">
+            <option value="nl">Nederlands</option>
+            <option value="en">English</option>
+            <option value="tr">Türkçe</option>
+            <option value="ar">العربية</option>
+            <option value="fr">Français</option>
+            <option value="de">Deutsch</option>
+            <option value="it">Italiano</option>
+          </select>
+        </div>
+      </header>
+
+      <main>
+        <div class="hero">
+          <div>
+            <div class="label">Demo voor Grill-Point · Willibrorduslaan 47</div>
+            <h1 style="margin-top: 18px">Een eigen app.<br /><span class="fire">De keuken live.</span></h1>
+            <p class="serif" style="max-width: 560px; margin-top: 22px">Bestellen zonder tussenpersoon, je eten live op de grill zien, een AI-chef die elke taal spreekt en de chef aan tafel roepen. Met het echte menu en de echte prijzen.</p>
+            <div class="cta">
+              <a class="btn fire-bg" href="app/">Open de app</a>
+              <a class="btn ink" href="admin/">Open het keukenscherm</a>
+            </div>
+            <div class="facts">
+              <div><b>4,7 ★</b><span>Google · 38 reviews</span></div>
+              <div><b>80+</b><span>gerechten en dranken</span></div>
+              <div><b>15–00</b><span>elke dag open</span></div>
+              <div><b>7</b><span>talen</span></div>
+            </div>
+          </div>
+          <div class="phone" id="phone"><div class="screen"><iframe id="app-frame" title="De app van Grill-Point" src="app/"></iframe></div></div>
+        </div>
+
+        <section>
+          <div class="label">Wat geen andere grillroom heeft</div>
+          <h2 style="margin-top: 12px">Zestien dingen.<br /><span class="fire">Tik er een aan.</span></h2>
+          <p class="serif" style="max-width: 640px; margin-top: 16px">Hij opent in de telefoon hierboven.</p>
+          <div class="grid" id="features"></div>
+        </section>
+
+        <section>
+          <div class="label">Het keukenscherm</div>
+          <h2 style="margin-top: 12px">De zaak in 3D, live.</h2>
+          <p class="serif" style="max-width: 720px; margin-top: 16px">De grill, de dönerspitten, de pizzaoven en de tafels. Elke bon boven de plek waar hij gemaakt wordt, de bezorgers op weg, en alle bestellingen uit de app, de site, Thuisbezorgd en de telefoon op één bord.</p>
+          <div class="desk">
+            <div class="bar"><i></i><i></i><i></i><span>Grill-Point · Het Vuur</span></div>
+            <div class="view" id="admin-view"><iframe id="admin-frame" title="Het keukenscherm" src="admin/" tabindex="-1"></iframe></div>
+          </div>
+        </section>
+
+        <section class="two">
+          <div>
+            <div class="label">Samen live</div>
+            <h2 style="margin-top: 12px">Bestel in de telefoon.<br /><span class="fire">Zie het in de keuken.</span></h2>
+          </div>
+          <div class="steps">
+            <div class="step"><b>1</b><div>Bestel een Adana of een kapsalon in de app hierboven, of roep aan tafel de chef.</div></div>
+            <div class="step"><b>2</b><div>Op het keukenscherm verschijnt je bon meteen, met een melding. Tik daar op Op het vuur of Klaar.</div></div>
+            <div class="step"><b>3</b><div>In de app zie je je eigen eten op de Grill-Cam, met je naam erbij, en daarna de bezorger op de kaart.</div></div>
+          </div>
+        </section>
+
+        <section>
+          <div class="label">Echt en demo</div>
+          <h2 style="margin-top: 12px">Wat klopt, en wat is verzonnen.</h2>
+          <div class="honest">
+            <div>
+              <h3>Echt</h3>
+              <p>Het menu met alle prijzen, beschrijvingen en keuzes (van grill-point.nl en de menukaart op Instagram), het adres, elke dag open van 15:00 tot 00:00, telefoon, e-mail, Instagram, de Google-score, betalen met iDEAL | Wero of contant, fooi van 10, 15 of 20 procent, en het spaarprogramma met welkomstkorting, VIP en verjaardagscadeau.</p>
+            </div>
+            <div>
+              <h3>Demo</h3>
+              <p>Het team (Kerem, Mert, Ayla, Sevda, Joep, Bilal, Mats), alle gasten en bestellingen, de punten en beloningen, de keuken in 3D en de kaart van Valkenswaard. De foto’s van gerechten zijn stockfoto’s; de foto van de zaak en de menukaart komen van Grill-Points eigen Instagram. Er wordt niets betaald of echt besteld.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer>Grill-Point · Willibrorduslaan 47, 5552 HB Valkenswaard · demo door Anka Enterprises</footer>
+    </div>
+
+    <script>
+      const FEATURES = [
+        { no: 1, title: 'Grill-Cam', line: 'Zie je eigen bestelling op de grill, met je naam erbij. Zoals een livestream uit de keuken.', path: '/live', hot: true },
+        { no: 2, title: 'AI-chef Usta', line: 'Vraag wat je met z’n vieren voor € 50 eet, wat sucuk is, of wat halal is. In je eigen taal.', path: '/chef' },
+        { no: 3, title: 'Chef aan tafel', line: 'Eén tik en Kerem komt langs, ook om de Mix Grill aan tafel aan te snijden.', path: '/tafel?nr=4' },
+        { no: 4, title: 'Samen bestellen', line: 'Scan de QR op tafel: iedereen bestelt vanaf zijn eigen telefoon op één bon.', path: '/tafel?nr=2' },
+        { no: 5, title: 'Burger in 3D', line: 'Draai de smash burger rond en haal hem laag voor laag uit elkaar.', path: '/gerecht/smash' },
+        { no: 6, title: 'Vuur aan bij aankomst', line: 'Afhalen? De keuken legt je eten pas op de grill als je onderweg bent.', path: '/gerecht/adana' },
+        { no: 7, title: 'Bezorger in 3D', line: 'Volg de scooter door Valkenswaard, van de Willibrorduslaan tot je deur.', path: '/live' },
+        { no: 8, title: 'Tafel kiezen in 3D', line: 'Reserveer je plek: binnen achter het glas of buiten op het terras.', path: '/reserveer' },
+        { no: 9, title: 'Draai de spies', line: 'Een köfte-spies draait op tafel en wijst aan wie er betaalt.', path: '/spies' },
+        { no: 10, title: 'Deel je bord', line: 'Een Instagram-story van je bestelling in de stijl van Grill-Point. Elke gast wordt reclame.', path: '/deel' },
+        { no: 11, title: 'Vuurpunten', line: 'Het spaarprogramma als een vlam die groeit, met beloningen en een verjaardagscadeau.', path: '/punten' },
+        { no: 12, title: 'Vers van het vuur', line: 'Live momenten uit de keuken: een nieuwe döner aan het spit, lahmacun uit de oven.', path: '/' },
+        { no: 13, title: 'Eerlijke levertijd', line: 'De druktemeter rekent met de bonnen die nu op de grill liggen, en toont het rustigste moment.', path: '/' },
+        { no: 14, title: 'Mijn dieet', line: 'Halal, vegetarisch, niet pittig of zonder gluten: het menu laat alleen zien wat past.', path: '/dieet' },
+        { no: 15, title: 'Uitverkocht, live', line: 'Is de kipdöner op? Eén tik op het keukenscherm en de app weet het meteen.', path: '/menu' },
+        { no: 16, title: 'Zonsondergang', line: 'Overdag crème, na zonsondergang in Valkenswaard kool en gloed. In zeven talen.', path: '/ik' },
+      ];
+      const LANG = window.LANG || 'nl';
+      const withLang = (href) => (LANG === 'nl' ? href : href + (href.includes('?') ? '&' : '?') + 'lang=' + LANG);
+      const menu = document.getElementById('lang');
+      menu.value = LANG;
+      menu.addEventListener('change', () => {
+        const url = new URL(location.href);
+        url.searchParams.set('lang', menu.value);
+        location.replace(url.toString());
+      });
+      const themeButton = document.getElementById('theme');
+      themeButton.textContent = document.documentElement.dataset.theme === 'night' ? '☀︎' : '☾';
+      themeButton.addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'night' ? 'day' : 'night';
+        try {
+          localStorage.setItem('grill-theme', next);
+        } catch (e) {}
+        location.reload();
+      });
+      for (const a of document.querySelectorAll('a[href^="app/"], a[href^="admin/"]')) a.setAttribute('href', withLang(a.getAttribute('href')));
+      const appFrame = document.getElementById('app-frame');
+      appFrame.src = withLang('app/');
+      document.getElementById('admin-frame').src = withLang('admin/');
+      const grid = document.getElementById('features');
+      const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      for (const f of FEATURES) {
+        const b = document.createElement('button');
+        b.className = 'feature' + (f.hot ? ' hot' : '');
+        b.innerHTML = '<span class="no">' + String(f.no).padStart(2, '0') + '</span><h3>' + esc(f.title) + '</h3><p>' + esc(f.line) + '</p><span class="go">Bekijk in de app →</span>';
+        b.addEventListener('click', () => {
+          appFrame.src = withLang('app' + f.path + (f.path.includes('?') ? '&' : '?') + 'intro=0');
+          document.getElementById('phone').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        grid.appendChild(b);
+      }
+      // Scale the app to the phone and the panel to its window.
+      const fit = () => {
+        const screen = appFrame.parentElement;
+        const k = screen.clientWidth / 390;
+        appFrame.style.transform = 'scale(' + k + ')';
+        appFrame.style.height = screen.clientHeight / k + 'px';
+        const view = document.getElementById('admin-view');
+        document.getElementById('admin-frame').style.transform = 'scale(' + view.clientWidth / 1440 + ')';
+      };
+      addEventListener('resize', fit);
+      fit();
+
+      // Dutch is written in the page; another language looks each text up in the same dictionary as the app and the
+      // panel (i18n/<lang>.json), with {placeholders} for names and numbers and " · " parts looked up one by one.
+      function translator(dict) {
+        const own = (k) => Object.prototype.hasOwnProperty.call(dict, k);
+        const folded = new Map(Object.keys(dict).filter((k) => !k.includes('{')).map((k) => [k.toLowerCase(), k]));
+        const escape = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const patterns = Object.keys(dict)
+          .filter((k) => k.includes('{'))
+          .map((k) => {
+            const parts = k.split(/\{(\w+)\}/);
+            const literal = parts.filter((_, i) => i % 2 === 0).join('');
+            if (!/\p{L}/u.test(literal)) return null;
+            const re = new RegExp('^' + parts.map((p, i) => (i % 2 ? '(.+?)' : escape(p))).join('') + '$', 's');
+            return { k, re, names: parts.filter((_, i) => i % 2), weight: literal.length };
+          })
+          .filter(Boolean)
+          .sort((a, b) => b.weight - a.weight);
+        const look = (text, depth) => {
+          const core = text.trim();
+          if (!core || !/\p{L}/u.test(core)) return null;
+          const wrap = (t) => text.replace(core, () => t);
+          if (own(core)) return wrap(dict[core]);
+          const f = folded.get(core.toLowerCase());
+          if (f) return wrap(dict[f]);
+          const punct = /^(.*?\p{L}.*?)([,.:;!?…]+)$/u.exec(core);
+          if (punct && own(punct[1])) return wrap(dict[punct[1]] + punct[2]);
+          if (depth > 3) return null;
+          for (const p of patterns) {
+            const m = p.re.exec(core);
+            if (!m) continue;
+            const values = {};
+            p.names.forEach((n, i) => (values[n] = look(m[i + 1], depth + 1) ?? m[i + 1]));
+            return wrap(dict[p.k].replace(/\{(\w+)\}/g, (x, n) => values[n] ?? x));
+          }
+          for (const sep of [' · ', ' — ', ' – ', ': ']) {
+            if (!core.includes(sep)) continue;
+            let changed = false;
+            const out = core.split(sep).map((part) => {
+              const t = look(part, depth + 1);
+              if (t != null) changed = true;
+              return t ?? part;
+            });
+            if (changed) return wrap(out.join(sep));
+          }
+          return null;
+        };
+        return (text) => look(text, 0) ?? text;
+      }
+
+      function translatePage(dict) {
+        const t = translator(dict);
+        const skip = 'script, style, [translate="no"]';
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+          acceptNode: (n) => (n.parentElement && !n.parentElement.closest(skip) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+        });
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        for (const n of nodes) {
+          if (!/\p{L}/u.test(n.nodeValue)) continue;
+          const text = n.nodeValue.replace(/\s+/g, ' ');
+          const out = t(text);
+          if (out !== text) n.nodeValue = out;
+        }
+        for (const el of document.querySelectorAll('[title], [alt], [aria-label]')) {
+          for (const name of ['title', 'alt', 'aria-label']) {
+            const v = el.getAttribute(name);
+            if (v && !el.closest('[translate="no"]')) el.setAttribute(name, t(v));
+          }
+        }
+        document.title = t(document.title);
+      }
+
+      const shown = () => document.documentElement.classList.remove('i18n-wait');
+      if (LANG !== 'nl') {
+        setTimeout(shown, 2500);
+        fetch('i18n/' + LANG + '.json')
+          .then((r) => r.json())
+          .then(translatePage)
+          .catch(() => {})
+          .finally(shown);
+      }
+    </script>
+  </body>
+</html>

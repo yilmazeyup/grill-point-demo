@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Grill-Point",
+    "slug": "grill-point-demo",
+    "scheme": "grillpoint",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "nl.grillpoint.demo"
+    },
+    "android": {
+      "package": "nl.grillpoint.demo",
+      "adaptiveIcon": {
+        "backgroundColor": "#120D0B",
+        "foregroundImage": "./assets/icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "Grill-Point Valkenswaard",
+      "shortName": "Grill-Point",
+      "themeColor": "#120D0B",
+      "backgroundColor": "#120D0B"
+    },
+    "plugins": [
+      ["expo-router", { "asyncRoutes": { "web": false } }],
+      "expo-font",
+      ["expo-splash-screen", { "backgroundColor": "#120D0B", "image": "./assets/splash-icon.png", "imageWidth": 220 }],
+      "expo-image"
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "grill-point-demo",
+  "private": true,
+  "workspaces": [
+    "apps/app",
+    "packages/*"
+  ],
+  "scripts": {
+    "app": "npm --workspace grill-app run start",
+    "ios": "npm --workspace grill-app run ios",
+    "web": "npm --workspace grill-app run web",
+    "admin": "npm --prefix apps/admin run dev",
+    "typecheck": "npm --workspace grill-app run typecheck && npm --prefix apps/admin run typecheck",
+    "site": "node scripts/build-site.mjs",
+    "site:serve": "node scripts/serve-site.mjs"
+  }
+}
