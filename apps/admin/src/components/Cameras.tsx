@@ -91,7 +91,7 @@ export function Cameras({ device, appUrl, onChange }: { device: CameraConfig; ap
   };
 
   return (
-    <section className="cams card">
+    <section className="cam-setup card">
       <div className="section-head">
         <div>
           <div className="kicker">Grill-Cam · live beeld in de app</div>
