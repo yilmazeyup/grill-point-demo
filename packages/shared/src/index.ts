@@ -12,3 +12,4 @@ export * from './kitchen';
 export * from './bridge';
 export * from './loyalty';
 export * from './palette';
+export * from './cameras';

@@ -12,9 +12,10 @@ Valkenswaard. This is a demo with test data only: a fictional team, fictional gu
 **Guest app:** the whole menu with the restaurant's own names, descriptions, options and prices; delivery or pickup,
 a tip of 10, 15 or 20 %, iDEAL | Wero or cash, and the savings programme, as on grill-point.nl. On top of that:
 
-1. **Grill-Cam**: after ordering, the guest watches their own food being made in a 3D kitchen (döner spits, charcoal
-   grill, plancha, pizza oven), with their name over their item and their ticket on the rail; it browns as the
-   minutes pass.
+1. **Grill-Cam**: after ordering, the guest watches their own food being made, live from the camera above the station
+   that is cooking it (see "Cameras" below). Where no camera hangs yet, a 3D kitchen stands in (döner spits, charcoal
+   grill, plancha, pizza oven) with the guest's name over their item and their ticket on the rail; it browns as the
+   minutes pass. The guest can switch between the camera and the 3D kitchen.
 2. **AI chef Usta**: answers questions about the menu (what to eat with four people for € 50, what sucuk is, halal,
    spicy, allergens, sauces) in the guest's language, with dish cards that go straight into the basket.
 3. **Chef at the table**: one tap and Kerem comes to the table, also to carve the Mix Grill; plus waiter, sauce, water
@@ -43,6 +44,23 @@ couriers riding off and back. One order board for every channel (the app, grill-
 the tables), the kitchen load and the times the app promises, tables and calls, couriers on a map, a menu manager with
 sold-out switches, tonight's numbers, a prep list for tomorrow (a demo forecast) and a social studio. What the guest
 does in the app shows up here at once, and the other way round.
+
+## Cameras
+
+Each station of the line can have a live camera: `grill`, `spit` (döner), `oven`, `plancha` and `pass`. The app shows a
+station's feed to the guest whose order is cooking there, and the 3D kitchen where there is none. A feed is a link the
+browser can play, over https (the site is https, so http feeds are blocked):
+
+- an HLS stream (`.m3u8`), from a camera cloud or from a small gateway in the shop (go2rtc, MediaMTX) that turns the
+  camera's RTSP stream into HLS; played with hls.js, or natively on iPhone;
+- an MJPEG stream, which many IP cameras offer;
+- a YouTube Live link (an unlisted stream works), shown muted without controls;
+- a video file or any page made to be embedded.
+
+Fill the links in `apps/app/public/cameras.json` (published as `/app/cameras.json`) to make them hold for every guest.
+The kitchen screen's **Camera's** tab shows each station with a preview; a link typed there holds on that device only,
+for trying it out. For the demo, the same tab can use the computer's or phone's own camera for one station: the app,
+open in the same browser (side by side on the start page), receives it over WebRTC.
 
 ## Real and demo
 

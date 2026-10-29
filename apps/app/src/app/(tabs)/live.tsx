@@ -1,13 +1,14 @@
-import { clock, countdown, dish, euro, openOrders, picksLabel, rng, STATION_NAMES, stageAt, staff, COOK_AT, type Order, type Stage, type Station } from '@grill/shared';
+import { cameraFor, clock, countdown, dish, euro, openOrders, picksLabel, rng, STATION_NAMES, stageAt, staff, COOK_AT, type Order, type Stage, type Station } from '@grill/shared';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CameraFeed } from '../../components/CameraFeed';
 import { Icon } from '../../components/Icon';
 import { Backdrop } from '../../components/Screen';
 import { useToast } from '../../components/Toast';
-import { Button, Card, Chip, DemoNote, LiveDot, Press, Row, Txt } from '../../components/ui';
+import { Button, Card, Chip, DemoNote, LiveDot, Press, Row, Segments, Txt } from '../../components/ui';
 import { tr } from '../../i18n';
 import { useDemo } from '../../state/demo';
 import { DeliveryMap } from '../../three/DeliveryMap';
@@ -40,7 +41,7 @@ const STEPS: { id: Stage; label: string }[] = [
  */
 export default function Live() {
   const insets = useSafeAreaInsets();
-  const { mine, now, evening, guest, markRated, send } = useDemo();
+  const { mine, now, evening, guest, markRated, send, cameras } = useDemo();
   const toast = useToast();
   const t = now.getTime();
   const active = mine.find((o) => o.done > t - 15 * 60000);
@@ -48,6 +49,7 @@ export default function Live() {
   const [manual, setManual] = useState<Station | null>(null);
   const [auto, setAuto] = useState(0);
   const [cheers, setCheers] = useState(0);
+  const [view, setView] = useState<'camera' | '3d'>('camera');
   useEffect(() => {
     const id = setInterval(() => setAuto((n) => n + 1), 7000);
     return () => clearInterval(id);
@@ -77,6 +79,10 @@ export default function Live() {
   const label = active && d ? `${active.number} · ${guest.name}: ${tr(d.name)}` : '';
   const cook = d ? staff(COOK_AT[d.station]) : null;
   const delivering = active && stage === 'onderweg';
+  // The real camera over that station when one is connected; the 3D kitchen otherwise, or when the guest picks it.
+  const feed = cameras[cameraFor(station)];
+  const anyCamera = Object.values(cameras).some(Boolean);
+  const showFeed = !!feed && view === 'camera';
   const finished = active && (stage === 'bezorgd' || stage === 'afgehaald' || stage === 'gegeten');
   const steps = active?.mode === 'afhalen' ? STEPS.filter((s) => s.id !== 'onderweg').map((s) => (s.id === 'bezorgd' ? { id: 'afgehaald' as Stage, label: 'Afgehaald' } : s)) : STEPS;
   const at = steps.findIndex((s) => s.id === stage);
@@ -106,15 +112,26 @@ export default function Live() {
           <View style={{ height: 470 + insets.top, backgroundColor: '#0D0907' }}>
             {delivering && active.area ? (
               <DeliveryMap area={active.area} courier={staff(active.courier ?? 'joep').name} progress={(t - (active.out ?? active.ready)) / (active.done - (active.out ?? active.ready))} style={{ flex: 1 }} />
+            ) : showFeed ? (
+              <CameraFeed key={`${station}-${feed}`} url={feed!} station={cameraFor(station)} style={{ flex: 1 }} />
             ) : (
               <GrillCam station={station} mine={active && stage === 'vuur' ? { label, kind, cook: cookProgress } : null} tickets={tickets} style={{ flex: 1 }} />
             )}
+            {showFeed && active && stage === 'vuur' ? (
+              <View pointerEvents="none" style={{ position: 'absolute', top: insets.top + 56, left: 0, right: 0, alignItems: 'center' }}>
+                <View style={{ backgroundColor: '#FFB04A', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 }}>
+                  <Txt v="small" weight="700" color="#1C1410">
+                    {label}
+                  </Txt>
+                </View>
+              </View>
+            ) : null}
             {!delivering ? <View {...fx('cctv')} pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} /> : null}
             <View pointerEvents="none" style={{ position: 'absolute', top: insets.top + 14, left: PAD, right: PAD, flexDirection: 'row', justifyContent: 'space-between' }}>
               <Row gap={8} style={{ backgroundColor: 'rgba(13,9,7,0.6)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
                 <LiveDot alert size={7} />
                 <Txt v="label" color="#FFF6EC" size={10}>
-                  {delivering ? `LIVE · ${tr('ONDERWEG')}` : `LIVE · ${tr(CAM_NAMES[station])}`}
+                  {delivering ? `LIVE · ${tr('ONDERWEG')}` : `${showFeed ? 'LIVE' : '3D'} · ${tr(CAM_NAMES[station])}`}
                 </Txt>
               </Row>
               <Row gap={8} style={{ backgroundColor: 'rgba(13,9,7,0.6)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
@@ -141,10 +158,22 @@ export default function Live() {
             ) : null}
           </View>
 
+          {!delivering && feed ? (
+            <View style={{ paddingHorizontal: PAD, paddingTop: 12 }}>
+              <Segments
+                value={view}
+                onChange={setView}
+                options={[
+                  { id: 'camera', label: 'Camerabeeld', icon: 'video' },
+                  { id: '3d', label: '3D-keuken', icon: 'cube' },
+                ]}
+              />
+            </View>
+          ) : null}
           {!delivering ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: PAD, gap: 8, paddingVertical: 12 }}>
               {CAM_ORDER.map((s) => (
-                <Chip key={s} small label={CAM_NAMES[s].split(' · ')[1]} on={station === s} icon="video" onPress={() => setManual(s)} />
+                <Chip key={s} small label={CAM_NAMES[s].split(' · ')[1]} on={station === s} icon={cameras[cameraFor(s)] ? 'video' : 'cube'} onPress={() => setManual(s)} />
               ))}
             </ScrollView>
           ) : null}
@@ -228,7 +257,7 @@ export default function Live() {
                     </Row>
                   </Card>
                 ) : null}
-                <DemoNote text="In de demo gaat alles sneller: een minuut in de keuken duurt hier twintig seconden. De camerabeelden zijn een 3D-keuken in de app; met echte camera's boven de grill werkt het precies zo." />
+                <DemoNote text={anyCamera ? 'In de demo gaat alles sneller: een minuut in de keuken duurt hier twintig seconden. Waar een camera hangt zie je het echte beeld; elders de 3D-keuken.' : 'In de demo gaat alles sneller: een minuut in de keuken duurt hier twintig seconden. Zodra de camera’s boven de grill hangen, zie je hier het echte beeld; tot dan toont de Grill-Cam de 3D-keuken.'} />
               </>
             ) : (
               <>
@@ -242,7 +271,7 @@ export default function Live() {
                   </Txt>
                 </View>
                 <Button title="Bestel en kijk mee" icon="flame" size="lg" full onPress={() => router.push('/menu')} />
-                <DemoNote text="De Grill-Cam laat een 3D-keuken zien die meeloopt met de bestellingen van vanavond. Met echte camera's boven de grill werkt het precies zo." />
+                <DemoNote text={anyCamera ? 'Waar een camera hangt zie je het echte beeld uit de keuken; bij de andere stations de 3D-keuken.' : 'Zodra de camera’s boven de grill hangen, zie je hier het echte beeld. Tot dan toont de Grill-Cam een 3D-keuken die meeloopt met de bestellingen van vanavond.'} />
               </>
             )}
           </View>

@@ -1,5 +1,5 @@
 import type { Order, Stage } from './kitchen';
-import type { Line } from './menu';
+import type { Line, Station } from './menu';
 import type { StaffId } from './team';
 
 /**
@@ -38,11 +38,13 @@ export type BridgeState = {
   events: BridgeEvent[];
   /** Dishes the kitchen marked sold out for tonight. */
   soldOut: string[];
+  /** Camera feeds set on the kitchen screen, per station, on top of cameras.json (see cameras.ts). */
+  cameras: Partial<Record<Station, string>>;
 };
 
 const KEY = 'grill-point-demo-v1';
 const CHANNEL = 'grill-point-demo';
-const EMPTY: BridgeState = { events: [], soldOut: [] };
+const EMPTY: BridgeState = { events: [], soldOut: [], cameras: {} };
 
 const storage = (): Storage | null => {
   try {
@@ -63,7 +65,11 @@ export function readBridge(): BridgeState {
     const raw = storage()?.getItem(KEY);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Partial<BridgeState>;
-    return { events: Array.isArray(parsed.events) ? parsed.events : [], soldOut: Array.isArray(parsed.soldOut) ? parsed.soldOut : [] };
+    return {
+      events: Array.isArray(parsed.events) ? parsed.events : [],
+      soldOut: Array.isArray(parsed.soldOut) ? parsed.soldOut : [],
+      cameras: parsed.cameras && typeof parsed.cameras === 'object' ? parsed.cameras : {},
+    };
   } catch {
     return EMPTY;
   }
@@ -96,7 +102,17 @@ export function emit(event: NewEvent): BridgeEvent {
 export const setSoldOut = (dishId: string, out: boolean) =>
   updateBridge((s) => ({ ...s, soldOut: out ? [...new Set([...s.soldOut, dishId])] : s.soldOut.filter((d) => d !== dishId) }));
 
-export const resetBridge = () => write(EMPTY);
+/** Sets (or with an empty url, clears) the camera feed of a station. */
+export const setCamera = (station: Station, url: string) =>
+  updateBridge((s) => {
+    const cameras = { ...s.cameras };
+    if (url.trim()) cameras[station] = url.trim();
+    else delete cameras[station];
+    return { ...s, cameras };
+  });
+
+/** Starts the demo over, but keeps the cameras the kitchen set up. */
+export const resetBridge = () => write({ ...EMPTY, cameras: readBridge().cameras });
 
 /** Calls back whenever the other screen changes something. */
 export function onBridge(callback: (state: BridgeState) => void): () => void {

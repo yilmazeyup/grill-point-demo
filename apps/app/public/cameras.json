@@ -1,0 +1,10 @@
+{
+  "_uitleg": "De live camera's boven de keuken, per station. Vul het adres van elke stream in (https): een HLS-stream (.m3u8), een MJPEG-stream, een YouTube Live-link of een pagina om in te sluiten. Leeg = de app toont daar de 3D-keuken.",
+  "cameras": {
+    "grill": "",
+    "spit": "",
+    "oven": "",
+    "plancha": "",
+    "pass": ""
+  }
+}

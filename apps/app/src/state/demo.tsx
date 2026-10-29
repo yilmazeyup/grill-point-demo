@@ -7,6 +7,9 @@ import {
   eveningOrders,
   kitchenNow,
   levelOf,
+  loadCameras,
+  mergeCameras,
+  type CameraConfig,
   lineKey,
   linesTotal,
   offsetFrom,
@@ -83,6 +86,8 @@ type Demo = {
   live: boolean;
   evening: Order[];
   bridge: BridgeState;
+  /** Live camera feeds per station: cameras.json, then what the kitchen screen set on this device. */
+  cameras: CameraConfig;
   mine: Order[];
   guest: Guest;
   cartCount: number;
@@ -128,6 +133,15 @@ export function DemoProvider({ children }: PropsWithChildren) {
     return () => clearInterval(t);
   }, []);
   useEffect(() => onBridge(setBridge), []);
+  const [cameraFile, setCameraFile] = useState<CameraConfig>({});
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    // cameras.json sits next to the app: at the site root in development, under /app/ on the demo site.
+    const path = globalThis.location?.pathname ?? '/';
+    const at = path.indexOf('/app/');
+    loadCameras(at >= 0 ? path.slice(0, at + 5) : '/').then(setCameraFile);
+  }, []);
+  const cameras = useMemo(() => mergeCameras(cameraFile, bridge.cameras ?? {}), [cameraFile, bridge.cameras]);
   useEffect(() => {
     try {
       globalThis.localStorage?.setItem(KEY, JSON.stringify(guest));
@@ -289,6 +303,7 @@ export function DemoProvider({ children }: PropsWithChildren) {
       live: !clock.demo,
       evening,
       bridge,
+      cameras,
       mine,
       guest,
       cartCount: guest.cart.reduce((s, l) => s + l.qty, 0),
@@ -312,7 +327,7 @@ export function DemoProvider({ children }: PropsWithChildren) {
       reset: () => setGuest(FRESH),
       send,
     }),
-    [clock, evening, bridge, mine, guest, add, setQty, update, place, joinTable, addToTable, call, send, fireTable],
+    [clock, evening, bridge, cameras, mine, guest, add, setQty, update, place, joinTable, addToTable, call, send, fireTable],
   );
 
   return <Context.Provider value={value}>{children}</Context.Provider>;

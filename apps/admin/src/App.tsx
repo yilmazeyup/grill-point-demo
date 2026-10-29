@@ -17,6 +17,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useKitchenClock } from './clock';
 import { Board } from './components/Board';
+import { Cameras } from './components/Cameras';
 import { Floor } from './components/Floor';
 import { Couriers, Feed, Kpis, Line, MenuManager, Numbers, Prep, Social, Tables } from './components/Panels';
 import { eventsOn, eventText, floorView, openCalls, useBridge, useTonight } from './data';
@@ -34,6 +35,7 @@ const TABS = [
   { id: 'menu', label: 'Menu' },
   { id: 'cijfers', label: 'Cijfers & prep' },
   { id: 'social', label: 'Social' },
+  { id: 'cameras', label: "Camera's" },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
 
@@ -241,6 +243,7 @@ export function App() {
           </>
         ) : null}
         {tab === 'social' ? <Social orders={orders} events={events} now={now} /> : null}
+        {tab === 'cameras' ? <Cameras device={bridge.cameras ?? {}} appUrl={APP_URL} onChange={refresh} /> : null}
       </main>
 
       <footer className="foot">
