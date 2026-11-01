@@ -43,7 +43,7 @@ jobs:
         run: npm run typecheck
 
       - name: Build the site
-        run: node scripts/build-site.mjs /grill-point-demo
+        run: node scripts/build-site.mjs /
 
       - uses: actions/upload-pages-artifact@v3
         with:
